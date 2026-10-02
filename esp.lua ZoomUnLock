@@ -3,15 +3,33 @@
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
 -- НАСТРОЙКИ (можно менять под свою игру):
-local ZOOM_STEP = 4   -- на сколько студов меняется зум за один щелчок колеса
+local ZOOM_STEP = 10   -- на сколько студов меняется зум за один щелчок колеса
 local MIN_ZOOM = 0    -- 0 = первое лицо
-local MAX_ZOOM = 40    -- максимальное отдаление камеры
+local MAX_ZOOM = 100    -- максимальное отдаление камеры
 
 local currentZoom = MIN_ZOOM
+
+-- Разблокировка мыши в первом лице:
+-- встроенные скрипты камеры каждый кадр ставят MouseBehavior = LockCenter,
+-- поэтому мы переопределяем его в RenderStepped (он выполняется ПОСЛЕ них).
+local unlockRenderName = "ZoomControllerUnlockMouse"
+
+local function unlockMouse()
+	RunService:BindToRenderStep(unlockRenderName, Enum.RenderPriority.Camera.Value + 1, function()
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	end)
+end
+
+local function lockMouse()
+	RunService:UnbindFromRenderStep(unlockRenderName)
+	UserInputService.MouseIconEnabled = true
+end
 
 -- Принудительно применяем зум: ставим Min и Max одинаковыми,
 -- тогда встроенные скрипты камеры не могут его «откатить».
@@ -19,6 +37,13 @@ local function applyZoom()
 	currentZoom = math.clamp(currentZoom, MIN_ZOOM, MAX_ZOOM)
 	player.CameraMinZoomDistance = currentZoom
 	player.CameraMaxZoomDistance = currentZoom
+
+	-- В первом лице (зум 0) разблокируем мышь, иначе — обычное поведение
+	if currentZoom == 0 then
+		unlockMouse()
+	else
+		lockMouse()
+	end
 end
 
 -- Колесо мыши
