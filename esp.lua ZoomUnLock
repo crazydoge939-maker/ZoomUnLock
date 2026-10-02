@@ -9,10 +9,15 @@ local player = Players.LocalPlayer
 
 -- НАСТРОЙКИ (можно менять под свою игру):
 local ZOOM_STEP = 10   -- на сколько студов меняется зум за один щелчок колеса
-local MIN_ZOOM = 0    -- 0 = первое лицо
+local MIN_ZOOM = 20    -- 0 = первое лицо
 local MAX_ZOOM = 100    -- максимальное отдаление камеры
 
+local CAM_HEIGHT_STEP = 1 -- на сколько студов поднимать/опускать камеру за нажатие
+local CAM_HEIGHT_MIN = -50
+local CAM_HEIGHT_MAX = 100
+
 local currentZoom = MIN_ZOOM
+local camHeightOffset = 0
 
 -- Разблокировка мыши в первом лице:
 -- встроенные скрипты камеры каждый кадр ставят MouseBehavior = LockCenter,
@@ -80,7 +85,20 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			or kc == Enum.KeyCode.KeypadMinus then
 			currentZoom += ZOOM_STEP
 			applyZoom()
+		elseif kc == Enum.KeyCode.One then
+			camHeightOffset = math.clamp(camHeightOffset + CAM_HEIGHT_STEP, CAM_HEIGHT_MIN, CAM_HEIGHT_MAX)
+		elseif kc == Enum.KeyCode.Two then
+			camHeightOffset = math.clamp(camHeightOffset - CAM_HEIGHT_STEP, CAM_HEIGHT_MIN, CAM_HEIGHT_MAX)
 		end
+	end
+end)
+
+-- Применяем вертикальное смещение камеры каждый кадр
+local cameraRenderName = "ZoomControllerCameraHeight"
+RunService:BindToRenderStep(cameraRenderName, Enum.RenderPriority.Camera.Value + 2, function()
+	local camera = workspace.CurrentCamera
+	if camera then
+		camera.CFrame = camera.CFrame * CFrame.new(0, camHeightOffset, 0)
 	end
 end)
 
