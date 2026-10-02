@@ -1,0 +1,63 @@
+-- ZoomController — LocalScript в StarterPlayerScripts
+-- Позволяет зумировать камеру даже когда зум стоит на 0 (вид от первого лица).
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+-- НАСТРОЙКИ (можно менять под свою игру):
+local ZOOM_STEP = 4   -- на сколько студов меняется зум за один щелчок колеса
+local MIN_ZOOM = 0    -- 0 = первое лицо
+local MAX_ZOOM = 40    -- максимальное отдаление камеры
+
+local currentZoom = MIN_ZOOM
+
+-- Принудительно применяем зум: ставим Min и Max одинаковыми,
+-- тогда встроенные скрипты камеры не могут его «откатить».
+local function applyZoom()
+	currentZoom = math.clamp(currentZoom, MIN_ZOOM, MAX_ZOOM)
+	player.CameraMinZoomDistance = currentZoom
+	player.CameraMaxZoomDistance = currentZoom
+end
+
+-- Колесо мыши
+UserInputService.InputChanged:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.UserInputType == Enum.UserInputType.MouseWheel then
+		local delta = input.Position.Z -- 1 = колесо вверх, -1 = вниз
+		currentZoom -= delta * ZOOM_STEP
+		applyZoom()
+	end
+end)
+
+-- Поддержка мобильных (щипок двумя пальцами)
+UserInputService.TouchPinch:Connect(function(_touchPositions, scale, velocity, state, gameProcessed)
+	if gameProcessed then return end
+	if state == Enum.UserInputState.Change then
+		-- scale растёт при разведении пальцев = отдаление
+		currentZoom += (scale - 1) * ZOOM_STEP * 2
+		applyZoom()
+	end
+end)
+
+-- Горячие клавиши: + (приблизить) и - (отдалить)
+-- Работает и с обычными, и с цифровыми (Keypad) плюс/минус.
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		local kc = input.KeyCode
+		if kc == Enum.KeyCode.Equals -- = (та же клавиша, что и +, без Shift)
+				or kc == Enum.KeyCode.KeypadPlus then
+			currentZoom -= ZOOM_STEP
+			applyZoom()
+		elseif kc == Enum.KeyCode.Minus
+			or kc == Enum.KeyCode.KeypadMinus then
+			currentZoom += ZOOM_STEP
+			applyZoom()
+		end
+	end
+end)
+
+-- Применяем стартовый зум
+applyZoom()
